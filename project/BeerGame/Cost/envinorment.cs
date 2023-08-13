@@ -1,201 +1,472 @@
-﻿using System;
-using System.Collections.Generic;
-using SimSharp;
+﻿using SimSharp;
+using config;
+using System.Runtime.CompilerServices;
+using System;
 
-namespace SimSharpExample
-{
-    public class Inventory
+namespace envinorment {
+
+    class Inventory
     {
-        public int item_id;
-        public int level;
-        public double holding_cost;
-        public double shortage_cost;
-        public List<double> level_over_time;
-        public List<double> inventory_cost_over_time;
+        public int ItemId { get; set; }
+        public int Level { get; set; }
+        public int HoldingCost { get; set; }
+        public int ShortageCost { get; set; }
+        public List<int> LevelOverTime { get; set; }
+        public List<int> InventoryCostOverTime { get; set; }
+        public List<int> TotalInventoryCost { get; set; }
 
-        public Inventory(Simulation env, int item_id, double holding_cost, double shortage_cost, int initial_level)
+        public Inventory(int item_id, int holding_cost, int shortage_cost, int initial_level)
         {
-            this.item_id = item_id;
-            this.level = initial_level;
-            this.holding_cost = holding_cost;
-            this.shortage_cost = shortage_cost;
-            this.level_over_time = new List<double>();
-            this.inventory_cost_over_time = new List<double>();
+            ItemId = item_id;
+            Level = initial_level;
+            HoldingCost = holding_cost;
+            ShortageCost = shortage_cost;
+            LevelOverTime = new List<int>();
+            InventoryCostOverTime = new List<int>();
+            TotalInventoryCost = new List<int>();
         }
 
-        public void cal_inventory_cost()
+        public void CalculateInventoryCost()
         {
-            if (level > 0)
+            if (Level > 0)
             {
-                inventory_cost_over_time.Add(holding_cost * level);
+                InventoryCostOverTime.Add(HoldingCost * Level);
             }
-            else if (level < 0)
+            else if (Level < 0)
             {
-                inventory_cost_over_time.Add(shortage_cost * Math.Abs(level));
+                InventoryCostOverTime.Add(ShortageCost * Math.Abs(Level));
             }
             else
             {
-                inventory_cost_over_time.Add(0);
+                InventoryCostOverTime.Add(0);
             }
-            Console.WriteLine($"[Inventory Cost of {I[item_id]["NAME"]}]: {inventory_cost_over_time[inventory_cost_over_time.Count - 1]}");
+
+            if (Variables.Ver_simulation)
+            {
+                Console.WriteLine($"[Inventory Cost of {Variables.I[ItemId].Name}]  {InventoryCostOverTime[^1]}");
+            }
+        }
+
+        public void CalculateEventHoldingCost()
+        {
+            for (int j = 0; j < Variables.I.Count; j++)
+            {
+                int dailyHoldingCost = 0;
+                for (int i = 0; i < Variables.SIM_TIME - 1; i++)
+                {
+                    dailyHoldingCost += EventHoldingCost[i - 1][j];
+                }
+                Console.WriteLine($"[Daily holding Cost of {Variables.I[j].Name}] {dailyHoldingCost}");
+            }
         }
     }
-
-    public class Provider
+    class Provider
     {
-        public Simulation env;
-        public string name;
-        public int item_id;
+        public Simulation Environment { get; set; }
+        public string Name { get; set; }
+        public int ItemId { get; set; }
 
         public Provider(Simulation env, string name, int item_id)
         {
-            this.env = env;
-            this.name = name;
-            this.item_id = item_id;
+            Environment = env;
+            Name = name;
+            ItemId = item_id;
         }
 
-        public IEnumerable<Event> deliver(int order_size, Inventory inventory)
+        public IEnumerable<Event> Deliver(int order_size, Inventory inventory)
         {
-            // Lead time
-            yield return env.Timeout(I[item_id]["SUP_LEAD_TIME"] * 24);
-            inventory.level += order_size;
-            Console.WriteLine($"{env.Now}: {name} has delivered {order_size} units of {I[item_id]['NAME']}");
+            // 리드 타임
+            yield return Environment.Timeout(TimeSpan.FromHours(Variables.I[ItemId].SupLeadTime * 24));
+            inventory.Level += order_size;
+            if (Variables.Ver_simulation)
+            {
+                Console.WriteLine($"{Environment.Now}: {Name}이(가) {Variables.I[ItemId].Name}의 {order_size}개를 납품하였습니다.");
+            }
         }
     }
-
-    public class Procurement
+    class Procurement
     {
-        public Simulation env;
-        public int item_id;
-        public double purchase_cost;
-        public double setup_cost;
-        public List<double> purchase_cost_over_time;
-        public List<double> setup_cost_over_time;
-        public double daily_procurement_cost;
+        public Simulation Environment { get; set; }
+        public int ItemId { get; set; }
+        public int PurchaseCost { get; set; }
+        public int SetupCost { get; set; }
+        public List<int> PurchaseCostOverTime { get; set; }
+        public List<int> SetupCostOverTime { get; set; }
+        public int DailyProcurementCost { get; set; }
 
-        public Procurement(Simulation env, int item_id, double purchase_cost, double setup_cost)
+        public Procurement(Simulation env, int item_id, int purchase_cost, int setup_cost)
         {
-            this.env = env;
-            this.item_id = item_id;
-            this.purchase_cost = purchase_cost;
-            this.setup_cost = setup_cost;
-            this.purchase_cost_over_time = new List<double>();
-            this.setup_cost_over_time = new List<double>();
-            this.daily_procurement_cost = 0;
+            Environment = env;
+            ItemId = item_id;
+            PurchaseCost = purchase_cost;
+            SetupCost = setup_cost;
+            PurchaseCostOverTime = new List<int>();
+            SetupCostOverTime = new List<int>();
+            DailyProcurementCost = 0;
         }
 
-        public IEnumerable<Event> order(Provider provider, Inventory inventory)
+        public IEnumerable<Event> Order(Provider provider, Inventory inventory)
         {
             while (true)
             {
-                // Place an order to a provider
-                yield return env.Timeout(I[item_id]["MANU_ORDER_CYCLE"] * 24);
-                // THIS WILL BE AN ACTION OF THE AGENT
-                int order_size = I[item_id]["LOT_SIZE_ORDER"];
-                Console.WriteLine($"{env.Now}: Placed an order for {order_size} units of {I[item_id]['NAME']}");
-                yield return env.Process(provider.deliver(order_size, inventory));
-                cal_procurement_cost();
+                // 공급업체에 주문 생성
+                yield return Environment.Timeout(TimeSpan.FromHours(Variables.I[ItemId].ManuOrderCycle * 24));
+                // 이 부분은 에이전트의 액션으로 변경될 것입니다.
+                int order_size = Variables.I[ItemId].LotSizeOrder;
+                if (Variables.Ver_simulation)
+                {
+                    Console.WriteLine($"{Environment.Now}: {Variables.I[ItemId].Name}의 {order_size}개 주문 생성");
+                }
+                Environment.Process(provider.Deliver(order_size, inventory));
+                CalProcurementCost();
             }
         }
 
-        public void cal_procurement_cost()
+        public void CalProcurementCost()
         {
-            daily_procurement_cost += purchase_cost * I[item_id]["LOT_SIZE_ORDER"] + setup_cost;
+            DailyProcurementCost += PurchaseCost * Variables.I[ItemId].LotSizeOrder + SetupCost;
         }
 
-        public void cal_daily_procurement_cost()
+        public void CalDailyProcurementCost()
         {
-            Console.WriteLine($"[Daily procurement cost of {I[item_id]["NAME"]}]  {daily_procurement_cost}");
-            daily_procurement_cost = 0;
+            if (Variables.Ver_simulation)
+            {
+                Console.WriteLine($"[{Variables.I[ItemId].Name}의 일일 조달 비용]  {DailyProcurementCost}");
+            }
+            DailyProcurementCost = 0;
         }
     }
 
-    public class Production
+    class Production
     {
-        public Simulation env;
-        public string name;
-        public int process_id;
-        public double production_rate;
-        public Dictionary<string, object> output;
-        public List<Inventory> input_inventories;
-        public Inventory output_inventory;
-        public double processing_cost;
-        public List<double> processing_cost_over_time;
-        public double daily_production_cost;
+        public Simulation Environment { get; set; }
+        public string Name { get; set; }
+        public int ProcessId { get; set; }
+        public int ProductionRate { get; set; }
+        public Item Output { get; set; }
+        public List<Inventory> InputInventories { get; set; }
+        public Inventory OutputInventory { get; set; }
+        public int ProcessingCost { get; set; }
+        public List<int> ProcessingCostOverTime { get; set; }
+        public int DailyProductionCost { get; set; }
+        public int ProcessStopCost { get; set; }
 
-        public class Production
+        public Production(Simulation env, string name, int process_id, int production_rate, Item output, List<Inventory> input_inventories, Inventory output_inventory, int processing_cost)
         {
-            private readonly Simulation env;
-            private readonly string name;
-            private readonly int process_id;
-            private readonly double production_rate;
-            private readonly Dictionary<string, object> output;
-            private readonly List<Inventory> input_inventories;
-            private readonly Inventory output_inventory;
-            private readonly double processing_cost;
-            private List<double> processing_cost_over_time = new List<double>();
-            private double daily_production_cost = 0;
+            Environment = env;
+            Name = name;
+            ProcessId = process_id;
+            ProductionRate = production_rate;
+            Output = output;
+            InputInventories = input_inventories;
+            OutputInventory = output_inventory;
+            ProcessingCost = processing_cost;
+            ProcessingCostOverTime = new List<int>();
+            DailyProductionCost = 0;
+            ProcessStopCost = 0;
+ 
+        }
 
-            public Production(Simulation env, string name, int process_id, double production_rate, Dictionary<string, object> output, List<Inventory> input_inventories, Inventory output_inventory, double processing_cost)
+        public IEnumerable<Event> process()
+        {
+            while (true)
             {
-                this.env = env;
-                this.name = name;
-                this.process_id = process_id;
-                this.production_rate = production_rate;
-                this.output = output;
-                this.input_inventories = input_inventories;
-                this.output_inventory = output_inventory;
-                this.processing_cost = processing_cost;
+                bool shortageCheck = false;
+                foreach (var inven in InputInventories)
+                {
+                    int useCount = Variables.P[ProcessId].InputUseCount[InputInventories.IndexOf(inven)];
+                    if (inven.Level < useCount)
+                    {
+                        shortageCheck = true;
+                    }
+                }
+
+                if (shortageCheck)
+                {
+                    ProcessStopCost += Variables.P[ProcessId].ProStopCost;
+                    if (Variables.Ver_simulation)
+                    {
+                        Console.WriteLine($"{Environment.Now}: {Name}이(가) 원자재 또는 WIP 부족으로 작업을 중지합니다.");
+                        Console.WriteLine($"{Environment.Now}: 작업 중지 비용: {ProcessStopCost}");
+                    }
+                    yield return Environment.Timeout(TimeSpan.FromHours(24));
+                }
+                else
+                {
+                    int totalUseCount = Variables.P[ProcessId].InputUseCount.Sum();
+
+                    double processingTime = 24.0 / ProductionRate;
+                    yield return Environment.Timeout(TimeSpan.FromHours(processingTime));
+
+                    DateTime now = Environment.Now;
+                    DateTime start = DateTime.MinValue;
+                    TimeSpan elapsedTime = now-start;
+
+                    if (Variables.Ver_simulation)
+                    {
+                        Console.WriteLine($"{Environment.Now}: {ProcessId} 작업 시작");
+                    }
+
+                    for (int i = 0; i < InputInventories.Count; i++)
+                    {
+                        Inventory inven = InputInventories[i];
+                        int useCount = Variables.P[ProcessId].InputUseCount[i];
+                        inven.Level -= useCount;
+
+                        if (Variables.Ver_simulation)
+                        {
+                            Console.WriteLine($"{Environment.Now}: {Variables.I[inven.ItemId].Name}의 재고 수준: {inven.Level}");
+                            double holdingCost = inven.Level * Variables.I[inven.ItemId].HoldCost;
+                            Console.WriteLine($"{Environment.Now}: {Variables.I[inven.ItemId].Name}의 보유 비용: {Math.Round(holdingCost, 2)}");
+                        }
+ 
+                        EventHoldingCost[(int)( 24)][inven.ItemId].Add(Math.Round(inven.Level * Variables.I[inven.ItemId].HoldCost, 2));
+                    }
+
+                    OutputInventory.Level += 1;
+                    CalProcessingCost(processingTime);
+
+                    if (Variables.Ver_simulation)
+                    {
+                        Console.WriteLine($"{Environment.Now}: {Output} 1개를 생산했습니다.");
+                        Console.WriteLine($"{Environment.Now}: {Output}의 재고 수준: {OutputInventory.Level}");
+                        double outputHoldingCost = OutputInventory.Level * Variables.I[OutputInventory.ItemId].HoldCost;
+                        Console.WriteLine($"{Environment.Now}: {Output}의 보유 비용: {Math.Round(outputHoldingCost, 2)}");
+                    }
+
+                    EventHoldingCost[(int)(elapsedTime.TotalHours / 24)][-1].Add(Math.Round(OutputInventory.Level * Variables.I[Output.ItemId].HoldCost, 2));
+
+                    EventHoldingCost[(int)(elapsedTime.TotalHours / 24)][0].Add(Math.Round(OutputInventory.Level * Variables.I[Output.ItemId].HoldCost, 2));
+                }
+            }
+        }
+
+        public void Cal_Processing_Cost(double processingTime)
+        {
+            DailyProductionCost += (int)(ProcessingCost * processingTime);
+        }
+
+        public void Cal_Daily_Production_Cost()
+        {
+            if (Variables.Ver_simulation)
+            {
+                Console.WriteLine($"[{Name}의 일일 생산 비용]  {DailyProductionCost}");
+            }
+            DailyProductionCost = 0;
+        }
+    }
+
+    class Sales
+    {
+        public Simulation Environment { get; set; }
+        public int ItemId { get; set; }
+        public int DeliveryCost { get; set; }
+        public int SetupCost { get; set; }
+        public List<int> SellingCostOverTime { get; set; }
+        public int DailySellingCost { get; set; }
+        public int LossCost { get; set; }
+
+        public Sales(Simulation env, int item_id, int delivery_cost, int setup_cost)
+        {
+            Environment = env;
+            ItemId = item_id;
+            DeliveryCost = delivery_cost;
+            SetupCost = setup_cost;
+            SellingCostOverTime = new List<int>();
+            DailySellingCost = 0;
+            LossCost = 0;
+        }
+
+        public IEnumerable<Event> Delivery(int item_id, int order_size, Inventory product_inventory)
+        {
+            yield return Environment.Timeout(TimeSpan.FromHours(I[item_id]["DUE_DATE"] * 24));
+
+            if (product_inventory.Level < order_size)
+            {
+                int numShortages = Math.Abs(product_inventory.Level - order_size);
+                if (product_inventory.Level > 0)
+                {
+                    if (Variables.Ver_simulation)
+                    {
+                        Console.WriteLine($"{Environment.Now}: 고객에게 제품 {product_inventory.Level}개가 전달되었습니다.");
+                    }
+
+                    product_inventory.Level -= order_size;
+                    CalSellingCost();
+                }
+
+                LossCost = Variables.I[item_id]["BACKORDER_COST"] * numShortages;
+
+                if (Variables.Ver_simulation)
+                {
+                    Console.WriteLine($"[손실 비용] {LossCost}");
+                    Console.WriteLine($"{Environment.Now}: 제품 부족으로 고객에게 {numShortages}개의 제품을 전달하지 못했습니다.");
+                }
+            }
+            else
+            {
+                product_inventory.Level -= order_size;
+                if (Variables.Ver_simulation)
+                {
+                    Console.WriteLine($"{Environment.Now}: 고객에게 제품 {order_size}개가 전달되었습니다.");
+                }
+
+                Cal_Selling_Cost();
+            }
+        }
+
+        public void Cal_Selling_Cost()
+        {
+            DailySellingCost += DeliveryCost * Variables.I[ItemId]["DEMAND_QUANTITY"] + SetupCost;
+        }
+
+        public void Cal_Daily_Selling_Cost()
+        {
+            if (Variables.Ver_simulation)
+            {
+                Console.WriteLine($"[{Variables.I[ItemId].Name}의 일일 판매 비용]  {DailySellingCost}");
             }
 
-            public IEnumerable<Event> Process()
+            DailySellingCost = 0;
+        }
+    }
+
+    class Customer
+    {
+        public Simulation Environment { get; set; }
+        public string Name { get; set; }
+        public int ItemId { get; set; }
+        public List<int> OrderHistory { get; set; }
+
+        public Customer(Simulation env, string name, int item_id)
+        {
+            Environment = env;
+            Name = name;
+            ItemId = item_id;
+            OrderHistory = new List<int>();
+        }
+
+        public IEnumerable<Event> Order(Sales sales, Inventory product_inventory)
+        {
+            while (true)
             {
-                while (true)
+                yield return Environment.Timeout(TimeSpan.FromHours(Variables.I[ItemId]["CUST_ORDER_CYCLE"] * 24));
+                int order_size = Variables.I[ItemId]["DEMAND_QUANTITY"];
+                OrderHistory.Add(order_size);
+
+                if (Variables.Ver_simulation)
                 {
-                    // Check the current state if input materials or WIPs are available
-                    bool shortage_check = false;
-                    foreach (var inven in input_inventories)
-                    {
-                        if (inven.level < 1)
-                        {
-                            inven.level -= 1;
-                            shortage_check = true;
-                        }
-                    }
-                    if (shortage_check)
-                    {
-                        Console.WriteLine($"{env.Now}: Stop {name} due to a shortage of input materials or WIPs");
-                        // Check again after 24 hours (1 day)
-                        yield return env.Timeout(24);
-                    }
-                    else
-                    {
-                        // Consuming input materials or WIPs and producing output WIP or Product
-                        double processing_time = 24 / production_rate;
-                        yield return env.Timeout(processing_time);
-                        Console.WriteLine($"{env.Now}: Process {process_id} begins");
-                        foreach (var inven in input_inventories)
-                        {
-                            inven.level -= 1;
-                            Console.WriteLine($"{env.Now}: Inventory level of {I[inven.item_id]['NAME']}: {inven.level}");
-                        }
-                        output_inventory.level += 1;
-                        Cal_Processing_Cost(processing_time);
-                        Console.WriteLine($"{env.Now}: A unit of {output['NAME']} has been produced");
-                        Console.WriteLine($"{env.Now}: Inventory level of {I[output_inventory.item_id]['NAME']}: {output_inventory.level}");
-                    }
+                    Console.WriteLine($"{Environment.Now}: 고객이 {Variables.I[ItemId].Name}의 제품 {order_size}개를 주문했습니다.");
+                }
+
+                Environment.Process(sales.Delivery(ItemId, order_size, product_inventory));
+            }
+        }
+    }
+    public class Etc
+    {
+        public static Tuple<SimSharp.Environment, List<Inventory>, List<Procurement>, List<Production>, Sales, Customer, List<Provider>> Create_env()
+        {
+            
+            var simpy_env = new SimSharp.Environment();
+            List<Inventory> inventoryList = new List<Inventory>();
+            foreach (int i in Variables.I.Keys)
+            {
+                inventoryList.Add(new Inventory(i, Variables.I[i].HoldCost, Variables.I[i].ShortageCost, Variables.I[i].InitLevel));
+            }
+
+            Customer customer = new Customer(simpy_env, "CUSTOMER", Variables.I[0].ID);
+
+            List<Provider> providerList = new List<Provider>();
+            List<Procurement> procurementList = new List<Procurement>();
+            foreach (int i in Variables.I.Keys)
+            {
+                if (Variables.I[i].Type == "Raw Material")
+                {
+                    providerList.Add(new Provider(simpy_env, "PROVIDER_" + i.ToString(), i));
+                    procurementList.Add(new Procurement(simpy_env, Variables.I[i].ID, Variables.I[i].PurchaseCost, Variables.I[i].SetupCostRaw));
                 }
             }
 
-            public void Cal_Processing_Cost(double processing_time)
+            Sales sales = new Sales(simpy_env, customer.ItemId, Variables.I[0].DeliveryCost, Variables.I[0].SetupCostRaw);
+
+            List<Production> productionList = new List<Production>();
+            foreach (int i in Variables.P.Keys)
             {
-                daily_production_cost += processing_cost * processing_time;
+                Inventory outputInventory = inventoryList[Variables.P[i].Output.ID];
+                List<Inventory> inputInventories = new List<Inventory>();
+                foreach (var j in Variables.P[i].InputList)
+                {
+                    
+                    inputInventories.Add(inventoryList[j.ID]);
+                }
+                Item Result_item_id = Variables.P[i].Output;
+                productionList.Add(new Production(simpy_env, "PROCESS_" + i.ToString(), Variables.P[i].ID,
+                                                   Variables.P[i].ProductionRate, Result_item_id, inputInventories, outputInventory, Variables.P[i].ProcessCost));
             }
 
-            public void Cal_Daily_Production_Cost()
+            simpy_env.Process(customer.Order(sales, inventoryList[Variables.I[0].ID]));
+            foreach (var production in productionList)
             {
-                Console.WriteLine($"[Daily production cost of {name}]  {daily_production_cost}");
-                daily_production_cost = 0;
+                simpy_env.Process(production.process());
             }
+            for (int i = 0; i < providerList.Count; i++)
+            {
+                simpy_env.Process(procurementList[i].Order(providerList[i], inventoryList[providerList[i].ItemId]));
+            }
+
+            return new Tuple<SimSharp.Environment, List<Inventory>, List<Procurement>, List<Production>, Sales, Customer, List<Provider>>(
+                simpy_env, inventoryList, procurementList, productionList, sales, customer, providerList);
         }
-                   
+
+        public static void CalCost(List<Inventory> inventoryList, List<Procurement> procurementList, List<Production> productionList, Sales sales, List<double> total_cost_per_day)
+        {
+            // Calculate the cost models
+            foreach (var inven in inventoryList)
+            {
+                inven.CalculateInventoryCost();
+            }
+            foreach (var production in productionList)
+            {
+                production.CalculateDailyProductionCost();
+            }
+            foreach (var procurement in procurementList)
+            {
+                procurement.CalculateDailyProcurementCost();
+            }
+            sales.CalculateDailySellingCost();
+
+            // Calculate the total cost for the current day and append to the list
+            double total_cost = 0;
+            foreach (var inven in inventoryList)
+            {
+                total_cost += inven.InventoryCostOverTime.Sum();
+            }
+            foreach (var production in productionList)
+            {
+                total_cost += production.DailyProductionCost;
+            }
+            foreach (var procurement in procurementList)
+            {
+                total_cost += procurement.DailyProcurementCost;
+            }
+            total_cost += sales.DailySellingCost;
+            total_cost_per_day.Add(total_cost);
+
+            // Reset values for the next day's calculation
+            foreach (var inven in inventoryList)
+            {
+                inven.InventoryCostOverTime.Clear();
+            }
+            foreach (var production in productionList)
+            {
+                production.DailyProductionCost = 0;
+            }
+            foreach (var procurement in procurementList)
+            {
+                procurement.DailyProcurementCost = 0;
+            }
+            sales.DailySellingCost = 0;
+        }
+    }
+}
