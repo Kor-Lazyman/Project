@@ -4,13 +4,6 @@ from config import *
 import random
 import visualization
 import time
-EventHoldingCost = []  # save the event holding cost
-for i in range(SIM_TIME):
-    num = []
-    for j in range(len(I)):
-        num.append([])
-    EventHoldingCost.append(num)
-
 
 class Inventory:
     def __init__(self, env, item_id, holding_cost, shortage_cost, initial_level):
@@ -27,9 +20,6 @@ class Inventory:
         # self.total_inven_cost = []
 
     def _cal_holding_cost(self, daily_events):
-      
-
-
         if self.current_level-self.updated_inven>0:
             holding_cost = (self.current_level-self.updated_inven) * self.unit_holding_cost * \
             (self.env.now - self.holding_cost_last_updated)
@@ -56,11 +46,6 @@ class Inventory:
         else:
             self.inventory_cost_over_time.append(0)
         daily_events.append(f"[Inventory Cost of {I[self.item_id]['NAME']}]  {self.inventory_cost_over_time[-1]}")
-        '''
-        elif self.current_level < 0:
-            self.inventory_cost_over_time.append(
-                self.shortage_cost * abs(self.current_level))
-            '''
        
 
 class Provider:
@@ -150,7 +135,7 @@ class Production:
                 if inven.current_level < input_qnty:  # SHORTAGE
                     shortage_check = True
             if shortage_check:
-                
+                yield self.env.timeout(24 - (self.env.now % 24))
                 self.daily_production_cost += self.unit_process_stop_cost
             
                 daily_events.append(
@@ -158,7 +143,7 @@ class Production:
                 daily_events.append(
                     f"{self.env.now}: Process stop cost : {self.unit_process_stop_cost}")
                 # Check again next day
-                yield self.env.timeout(24 - (self.env.now % 24))
+               
                 # continue
             else:
                 # Consuming input materials or WIPs and producing output WIP or Product
@@ -340,10 +325,7 @@ def create_env(I, P, daily_events):
 
 
 def simpy_event_processes(agent, simpy_env, inventoryList, procurementList, productionList, sales, customer, providerList, daily_events, I):
-    # Event processes for SimPy simulation
-    #Check the date we should Delivery product?
-   
-    
+    # Event processes for SimPy simulation   
     simpy_env.process(customer.order(
         sales, inventoryList[I[0]["ID"]], daily_events))  # Customer
     simpy_env.process(sales.delivery(0, customer, inventoryList[0], daily_events))
