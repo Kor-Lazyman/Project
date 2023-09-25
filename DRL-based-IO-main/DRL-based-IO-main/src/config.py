@@ -31,20 +31,22 @@
 
 
 # Scenario 1
-I = {0: {"ID": 0, "TYPE": "Product",      "NAME": "PRODUCT",        "INIT_LEVEL":0, "CUST_ORDER_CYCLE": 3, "DEMAND_QUANTITY": 10,                                           "HOLD_COST": 5, "SHORTAGE_COST": 10,                     "SETUP_COST_PRO": 50, "DELIVERY_COST": 10, "DUE_DATE": 7, "BACKORDER_COST": 5},
-     1: {"ID": 1, "TYPE": "Raw Material", "NAME": "RAW MATERIAL 1", "INIT_LEVEL": 0, "MANU_ORDER_CYCLE": 1,                        "SUP_LEAD_TIME": 5, "ORDER": [0, 1] ,"LOT_SIZE":10,"HOLD_COST": 1, "SHORTAGE_COST": 2, "PURCHASE_COST": 3,  "SETUP_COST_RAW": 20}}
-P = {0: {"ID": 0, "PRODUCTION_RATE": 3, "INPUT_TYPE_LIST": [I[1]], "QNTY_FOR_INPUT_ITEM": [
-    1], "OUTPUT": I[0], "PROCESS_COST": 5, "PROCESS_STOP_COST": 2}}
+'''
+I = {0: {"ID": 0, "TYPE": "Product",      "NAME": "PRODUCT",        "INIT_LEVEL":0, "CUST_ORDER_CYCLE": 7, "DEMAND_QUANTITY": 10,                                           "HOLD_COST": 10, "SHORTAGE_COST": 10,                     "SETUP_COST_PRO": 50, "DELIVERY_COST": 10, "DUE_DATE": 5, "BACKORDER_COST": 5},
+     1: {"ID": 1, "TYPE": "Raw Material", "NAME": "RAW MATERIAL 1", "INIT_LEVEL": 10, "MANU_ORDER_CYCLE": 1,                        "SUP_LEAD_TIME": 1, "ORDER": [0, 1] ,"LOT_SIZE":10,"HOLD_COST": 10, "SHORTAGE_COST": 8, "PURCHASE_COST": 3,  "SETUP_COST_RAW": 20}}
+P = {0: {"ID": 0, "PRODUCTION_RATE": 2, "INPUT_TYPE_LIST": [I[1]], "QNTY_FOR_INPUT_ITEM": [
+    1], "OUTPUT": I[0], "PROCESS_COST": 10, "PROCESS_STOP_COST": 2}}
+
 '''
 # Scenario 2
-I = {0: {"ID": 0, "TYPE": "Product",      "NAME": "PRODUCT",          "INIT_LEVEL": 30, "CUST_ORDER_CYCLE": 7, "DEMAND_QUANTITY": 21,                                           "HOLD_COST": 5, "SHORTAGE_COST": 10,                     "SETUP_COST_PRO": 50, "DELIVERY_COST": 10, "DUE_DATE": 2, "BACKORDER_COST": 5},
-     1: {"ID": 1, "TYPE": "Raw Material", "NAME": "RAW MATERIAL 1.1", "INIT_LEVEL": 30, "MANU_ORDER_CYCLE": 7,                        "SUP_LEAD_TIME": 7, "LOT_SIZE_ORDER": 21, "HOLD_COST": 1, "SHORTAGE_COST": 2, "PURCHASE_COST": 3,  "SETUP_COST_RAW": 20},
-     2: {"ID": 2, "TYPE": "Raw Material", "NAME": "RAW MATERIAL 2.1", "INIT_LEVEL": 30, "MANU_ORDER_CYCLE": 7,                        "SUP_LEAD_TIME": 7, "LOT_SIZE_ORDER": 21, "HOLD_COST": 1, "SHORTAGE_COST": 2, "PURCHASE_COST": 3,  "SETUP_COST_RAW": 20},
-     3: {"ID": 3, "TYPE": "Raw Material", "NAME": "RAW MATERIAL 2.2", "INIT_LEVEL": 30, "MANU_ORDER_CYCLE": 7,                        "SUP_LEAD_TIME": 7, "LOT_SIZE_ORDER": 21, "HOLD_COST": 1, "SHORTAGE_COST": 2, "PURCHASE_COST": 3,  "SETUP_COST_RAW": 20},
-     4: {"ID": 4, "TYPE": "WIP",          "NAME": "WIP 1",            "INIT_LEVEL": 30,                                                                                         "HOLD_COST": 2, "SHORTAGE_COST": 2}}
+I = {0: {"ID": 0, "TYPE": "Product",      "NAME": "PRODUCT",          "INIT_LEVEL": 0, "CUST_ORDER_CYCLE": 7, "DEMAND_QUANTITY": 40,                                           "HOLD_COST": 5, "SHORTAGE_COST": 10,                     "SETUP_COST_PRO": 50, "DELIVERY_COST": 10, "DUE_DATE": 2, "BACKORDER_COST": 5},
+     1: {"ID": 1, "TYPE": "Raw Material", "NAME": "RAW MATERIAL 1.1", "INIT_LEVEL": 0, "MANU_ORDER_CYCLE": 1,                        "SUP_LEAD_TIME": 1, "ORDER": [0, 1],"LOT_SIZE": 20, "HOLD_COST": 1, "SHORTAGE_COST": 2, "PURCHASE_COST": 3,  "SETUP_COST_RAW": 20},
+     2: {"ID": 2, "TYPE": "Raw Material", "NAME": "RAW MATERIAL 2.1", "INIT_LEVEL": 0, "MANU_ORDER_CYCLE": 1,                        "SUP_LEAD_TIME":1, "ORDER": [0, 1],"LOT_SIZE": 20, "HOLD_COST": 1, "SHORTAGE_COST": 2, "PURCHASE_COST": 3,  "SETUP_COST_RAW": 20},
+     3: {"ID": 3, "TYPE": "Raw Material", "NAME": "RAW MATERIAL 2.2", "INIT_LEVEL": 0, "MANU_ORDER_CYCLE": 1,                        "SUP_LEAD_TIME": 1, "ORDER": [0, 1],"LOT_SIZE": 20, "HOLD_COST": 1, "SHORTAGE_COST": 2, "PURCHASE_COST": 3,  "SETUP_COST_RAW": 20},
+     4: {"ID": 4, "TYPE": "WIP",          "NAME": "WIP 1",            "INIT_LEVEL": 0,                                                                                         "HOLD_COST": 2, "SHORTAGE_COST": 2}}
 
-P = {0: {"ID": 0, "PRODUCTION_RATE": 3, "INPUT_LIST": [I[1]]            , "INPUT_USE_COUNT": [1]    , "OUTPUT": I[4], "PROCESS_COST": 5, "PRO_STOP_COST": 2},
-     1: {"ID": 1, "PRODUCTION_RATE": 2, "INPUT_LIST": [I[2], I[3], I[4]], "INPUT_USE_COUNT": [1,1,1], "OUTPUT": I[0], "PROCESS_COST": 6, "PRO_STOP_COST": 3}}
+P = {0: {"ID": 0, "PRODUCTION_RATE": 3, "INPUT_TYPE_LIST": [I[1]]            , "QNTY_FOR_INPUT_ITEM": [1]    , "OUTPUT": I[4], "PROCESS_COST": 5, "PROCESS_STOP_COST": 2},
+     1: {"ID": 1, "PRODUCTION_RATE": 2, "INPUT_TYPE_LIST": [I[2], I[3], I[4]], "QNTY_FOR_INPUT_ITEM": [2,2,1], "OUTPUT": I[0], "PROCESS_COST": 6, "PROCESS_STOP_COST": 3}}
 '''
 # Print logs
 PRINT_SIM_EVENTS = True
@@ -54,25 +56,11 @@ COST_VALID = False
 VISUAL = False
 SPECIFIC_HOLDING_COST = False
 EventHoldingCost = []
-
+'''
 # Simulation
-SIM_TIME = 15  # [days]
-# INITIAL_INVENTORY = 100  # [units]
-EPISODES = 1
+SIM_TIME = 20 # [days]
+# INITIAL_INVENTORY = 100  # [units]EPISODES = 1
 total_cost_per_day = []
 batch_size = 32
 action_space = []
 values = [0, 10, 20]
-for i in values:
-    for j in values:
-        for k in values:
-            action_space.append([i, j, k])
-
-# hyper parameter DQN
-discount_factor = 0.98
-epsilon_greedy = 1.0
-epsilon_min = 0.01
-epsilon_decay = 0.99995
-learning_rate = 0.001
-max_memory_size = 2000
-target_update_frequency = 1
