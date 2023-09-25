@@ -5,6 +5,7 @@ import random
 import visualization
 import time
 
+
 class Inventory:
     def __init__(self, env, item_id, holding_cost, shortage_cost, initial_level):
         self.env = env
@@ -69,6 +70,7 @@ class Procurement:
         self.unit_purchase_cost = purchase_cost
         self.unit_setup_cost = setup_cost
         self.daily_procurement_cost = 0
+        self.action=0
         # self.purchase_cost_over_time = []  # Data tracking for purchase cost
         # self.setup_cost_over_time = []  # Data tracking for setup cost
 
@@ -78,7 +80,7 @@ class Procurement:
         daily_events.append(
             f"{self.env.now}: Daily procurement cost of {I[self.item_id]['NAME']} has been updated: {self.daily_procurement_cost}")
 
-    def order(self, provider, inventory, agent, daily_events):
+    def order(self, provider, inventory,daily_events):
         order_size=I[inventory.item_id]["LOT_SIZE"]
         while True:
             # Place an order to a provider
@@ -87,8 +89,7 @@ class Procurement:
             # order_size = I[self.item_id]["LOT_SIZE_ORDER"]
             # order_size = agent.choose_action_tmp(inventory)
        
-            order= random.choice(I[self.item_id]["ORDER"])
-            if order==0:
+            if self.action==0:
                 pass
             else:
                 
@@ -126,15 +127,20 @@ class Production:
             f"{self.env.now}: Daily production cost of {self.name} has been updated: {processing_cost}")
 
     def process(self, daily_events,customer):
+        already_stop=False
         while True:
 
            
             # Check the current state if input materials or WIPs are available
             shortage_check = False
+            
             for inven, input_qnty in zip(self.input_inventories, self.qnty_for_input_item):
-                if inven.current_level < input_qnty:  # SHORTAGE
+                if inven.current_level < input_qnty:
+                    
+                    # SHORTAGE
                     shortage_check = True
-            if shortage_check:
+            if shortage_check==True and already_stop==False:
+                already_stop=True
                 yield self.env.timeout(24 - (self.env.now % 24))
                 self.daily_production_cost += self.unit_process_stop_cost
             
@@ -143,9 +149,12 @@ class Production:
                 daily_events.append(
                     f"{self.env.now}: Process stop cost : {self.unit_process_stop_cost}")
                 # Check again next day
-               
+            elif shortage_check==True:
+                yield self.env.timeout(24 - (self.env.now % 24))
+                self.daily_production_cost += self.unit_process_stop_cost
                 # continue
             else:
+                already_stop=False
                 # Consuming input materials or WIPs and producing output WIP or Product
                 daily_events.append(
                     f"{self.env.now}: Process {self.process_id} begins")
@@ -179,7 +188,6 @@ class Sales:
         self.daily_selling_cost = 0
         self.setup_cost=setup_cost
         self.num_shortages=0
-        self.delivery_check=0
         # self.loss_cost = 0
 
     def _cal_selling_cost(self, delivery_size, daily_events):
@@ -239,7 +247,7 @@ class Customer:
         self.env = env
         self.name = name
         self.item_id = item_id
-        self.order_history = []
+        self.order_history = [0]
         self.order_size=I[self.item_id]["DEMAND_QUANTITY"]
         self.cont=0
         
@@ -303,6 +311,7 @@ def create_env(I, P, daily_events):
     customer = Customer(simpy_env, "CUSTOMER", I[0]["ID"])
     providerList = []
     procurementList = []
+    total_cost_per_day=[]
     for i in I.keys():
         # Create a provider and the corresponding procurement if the type of the item is Raw Material
         if I[i]["TYPE"] == 'Raw Material':
@@ -324,16 +333,17 @@ def create_env(I, P, daily_events):
     return simpy_env, inventoryList, procurementList, productionList, sales, customer, providerList, daily_events
 
 
-def simpy_event_processes(agent, simpy_env, inventoryList, procurementList, productionList, sales, customer, providerList, daily_events, I):
+def simpy_event_processes (simpy_env, inventoryList, procurementList, productionList, sales, customer, providerList, daily_events, I):
     # Event processes for SimPy simulation   
+    simpy_env.process(sales.delivery(0, customer, inventoryList[0], daily_events))
     simpy_env.process(customer.order(
         sales, inventoryList[I[0]["ID"]], daily_events))  # Customer
-    simpy_env.process(sales.delivery(0, customer, inventoryList[0], daily_events))
+    
     for production in productionList:  # Processes
         simpy_env.process(production.process(daily_events,customer))
     for i in range(len(providerList)):  # Procurements
         simpy_env.process(procurementList[i].order(
-            providerList[i], inventoryList[providerList[i].item_id], agent, daily_events))
+            providerList[i], inventoryList[providerList[i].item_id], daily_events))
 
 
 def cal_cost(inventoryList, procurementList, productionList, sales, total_cost_per_day, daily_events):
@@ -363,4 +373,5 @@ def cal_cost(inventoryList, procurementList, productionList, sales, total_cost_p
         production.daily_production_cost = 0
     for procurement in procurementList:
         procurement.daily_procurement_cost = 0
-    sales.daily_selling_cost = 0
+
+    
