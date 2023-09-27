@@ -7,7 +7,7 @@ import time
 
 
 class Inventory:
-    def __init__(self, env, item_id, holding_cost, shortage_cost, initial_level):
+    def __init__(self, env, item_id, holding_cost, initial_level):
         self.env = env
         self.item_id = item_id  # 0: product; others: WIP or raw material
         self.current_level = initial_level  # capacity=infinity
@@ -76,12 +76,12 @@ class Procurement:
 
     def _cal_procurement_cost(self, order_size, daily_events):
         self.daily_procurement_cost += self.unit_purchase_cost * \
-            order_size + self.unit_setup_cost
+            order_size+ self.unit_setup_cost
         daily_events.append(
             f"{self.env.now}: Daily procurement cost of {I[self.item_id]['NAME']} has been updated: {self.daily_procurement_cost}")
 
     def order(self, provider, inventory,daily_events):
-        order_size=I[inventory.item_id]["LOT_SIZE"]
+        
         while True:
             # Place an order to a provider
             yield self.env.timeout(I[self.item_id]["MANU_ORDER_CYCLE"] * 24)
@@ -92,7 +92,7 @@ class Procurement:
             if self.action==0:
                 pass
             else:
-                
+                order_size=self.action
                 daily_events.append(
                     f"{self.env.now}: Placed an order for {order_size} units of {I[self.item_id]['NAME']}")
                 self.env.process(provider.deliver(
@@ -102,7 +102,7 @@ class Procurement:
     def cal_daily_procurement_cost(self, daily_events):
         daily_events.append(
             f"[Daily procurement cost of {I[self.item_id]['NAME']}]  {self.daily_procurement_cost}")
-        self.daily_procurement_cost = 0
+        
 
 
 class Production:
@@ -151,7 +151,7 @@ class Production:
                 # Check again next day
             elif shortage_check==True:
                 yield self.env.timeout(24 - (self.env.now % 24))
-                self.daily_production_cost += self.unit_process_stop_cost
+                pass
                 # continue
             else:
                 already_stop=False
@@ -175,8 +175,7 @@ class Production:
     def cal_daily_production_cost(self, daily_events):
         daily_events.append(
             f"[Daily production cost of {self.name}]  {self.daily_production_cost}")
-        self.daily_production_cost = 0
-
+        return self.daily_production_cost
 
 class Sales:
     def __init__(self, env, item_id, delivery_cost, due_date,setup_cost):
@@ -201,12 +200,10 @@ class Sales:
             if self.env.now==0:
                 
                 yield self.env.timeout(I[self.item_id]["DUE_DATE"] * 24)
-                print("============")
-                print(self.env.now)
+
             else:
                 yield self.env.timeout(I[0]["CUST_ORDER_CYCLE"] * 24)
-                print("============")
-                print(self.env.now)
+
 
             # BACKORDER: Check if products are available
             if product_inventory.current_level <customer.order_history[-1]:
@@ -239,7 +236,7 @@ class Sales:
     def cal_daily_selling_cost(self, daily_events):
         daily_events.append(
             f"[Daily selling cost of  {I[self.item_id]['NAME']}]  {self.daily_selling_cost}")
-        self.daily_selling_cost = 0
+        return self.daily_selling_cost
 
 
 class Customer:
@@ -306,7 +303,7 @@ def create_env(I, P, daily_events):
     inventoryList = []
     for i in I.keys():
         inventoryList.append(
-            Inventory(simpy_env, i, I[i]["HOLD_COST"], I[i]["SHORTAGE_COST"], I[i]["INIT_LEVEL"]))
+            Inventory(simpy_env, i, I[i]["HOLD_COST"], I[i]["INIT_LEVEL"]))
     # Create stakeholders (Customer, Providers)
     customer = Customer(simpy_env, "CUSTOMER", I[0]["ID"])
     providerList = []
@@ -354,9 +351,8 @@ def cal_cost(inventoryList, procurementList, productionList, sales, total_cost_p
         production.cal_daily_production_cost()
     for procurement in procurementList:
         procurement.cal_daily_procurement_cost()
-    sales.cal_daily_selling_cost()
     # Calculate the total cost for the current day and append to the list
-    total_cost = 0
+    total_cost =sales.cal_daily_selling_cost()
     for inven in inventoryList:
         total_cost += sum(inven.inventory_cost_over_time)
     for production in productionList:
