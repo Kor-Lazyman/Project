@@ -210,7 +210,7 @@ def main():
     daily_events = []
    
     env = CustomSimPyEnv(daily_events,action_space)
-    EPISODES = 1 # 에피소드 수를 조정
+    EPISODES = 3000 # 에피소드 수를 조정
     # model을 불러올려면 model=(A2C).load->
     model1 = A2C('MultiInputPolicy', env, verbose=0)
     '''

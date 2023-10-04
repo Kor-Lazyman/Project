@@ -44,8 +44,8 @@ I = {0: {"ID": 0, "TYPE": "Product",      "NAME": "PRODUCT",          "INIT_LEVE
      3: {"ID": 3, "TYPE": "Raw Material", "NAME": "RAW MATERIAL 2.2", "INIT_LEVEL": 10, "MANU_ORDER_CYCLE": 1,                        "SUP_LEAD_TIME": 1, "ORDER": [0, 1],"LOT_SIZE": 20, "HOLD_COST": 5, "SHORTAGE_COST": 0, "PURCHASE_COST": 5,  "SETUP_COST_RAW": 5},
      4: {"ID": 4, "TYPE": "WIP",          "NAME": "WIP 1",            "INIT_LEVEL": 0,                                                                                         "HOLD_COST": 7, "SHORTAGE_COST": 0}}
 
-P = {0: {"ID": 0, "PRODUCTION_RATE": 3, "INPUT_TYPE_LIST": [I[1]]            , "QNTY_FOR_INPUT_ITEM": [1]    , "OUTPUT": I[4], "PROCESS_COST": 10, "PROCESS_STOP_COST": 2},
-     1: {"ID": 1, "PRODUCTION_RATE": 2, "INPUT_TYPE_LIST": [I[2], I[3], I[4]], "QNTY_FOR_INPUT_ITEM": [1,1,1], "OUTPUT": I[0], "PROCESS_COST":10, "PROCESS_STOP_COST": 3}}
+P = {0: {"ID": 0, "PRODUCTION_RATE": 3, "INPUT_TYPE_LIST": [I[1]]            , "QNTY_FOR_INPUT_ITEM": [1]    , "OUTPUT": I[4], "PROCESS_COST": 20, "PROCESS_STOP_COST": 2},
+     1: {"ID": 1, "PRODUCTION_RATE": 2, "INPUT_TYPE_LIST": [I[2], I[3], I[4]], "QNTY_FOR_INPUT_ITEM": [1,2,1], "OUTPUT": I[0], "PROCESS_COST":20, "PROCESS_STOP_COST": 3}}
 '''
 # Print logs
 PRINT_SIM_EVENTS = True
@@ -57,7 +57,7 @@ SPECIFIC_HOLDING_COST = False
 EventHoldingCost = []
 '''
 # Simulation
-SIM_TIME = 50# [days]
+SIM_TIME = 100# [days]
 # INITIAL_INVENTORY = 100  # [units]EPISODES = 1
 total_cost_per_day = []
 batch_size = 32

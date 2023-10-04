@@ -35,13 +35,13 @@ class Inventory:
         self.daily_inven_cost += self.holding_cost
 
     def update_inven_level(self, quantity_of_change, daily_events,Decision):
-    
-        self.updated_inven=int(quantity_of_change)
+        print("Updated_change:",quantity_of_change)
+        self.updated_inven=(quantity_of_change)
         self.current_level +=self.updated_inven
         self._cal_holding_cost(daily_events)
-        if self.current_level>10:
-            self.holding_cost+=50*(self.current_level-40)
-            self.current_level=10
+        if self.current_level>20:
+            self.holding_cost+=50*(self.current_level-20)
+            self.current_level=20
             
             
         if Decision==1:
@@ -114,7 +114,7 @@ class Procurement:
     def cal_daily_procurement_cost(self, daily_events):
         daily_events.append(
             f"[Daily procurement cost of {I[self.item_id]['NAME']}]  {self.daily_procurement_cost}")
-        
+ 
 
 
 class Production:
