@@ -61,7 +61,7 @@ class CustomSimPyEnv(gym.Env):
             'raw_material_inventory 2': np.array([I[2]["INIT_LEVEL"]]),
             'raw_material_inventory 3': np.array([I[3]["INIT_LEVEL"]]),
             'WIP':np.array([I[4]["INIT_LEVEL"]]),
-            'product_inventory': np.array([self.inventoryList[0].current_level]),
+            'product_inventory': np.array([I[0]["INIT_LEVEL"]]),
             'current_demand': np.array([0]),
 
         }
@@ -87,7 +87,7 @@ class CustomSimPyEnv(gym.Env):
             'raw_material_inventory 2': np.array([I[2]["INIT_LEVEL"]]),
             'raw_material_inventory 3': np.array([I[3]["INIT_LEVEL"]]),
             'WIP':np.array([I[4]["INIT_LEVEL"]]),
-            'product_inventory': np.array([self.inventoryList[0].current_level]),
+            'product_inventory': np.array([I[0]["INIT_LEVEL"]]),
             'current_demand': np.array([0]),
         }
 
