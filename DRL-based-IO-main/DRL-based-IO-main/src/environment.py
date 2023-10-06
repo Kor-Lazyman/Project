@@ -274,7 +274,8 @@ class Customer:
 
 # 랜덤한 수요 생성
         num_samples = 1  # 생성할 수요 데이터 포인트의 개수
-        demand_samples = np.round(np.random.normal(mean, std_dev, num_samples))
+        demand_samples = int(np.round(np.random.normal(mean, std_dev, num_samples)))
+        
         return demand_samples
     def order(self, sales, product_inventory, daily_events):
         

@@ -17,7 +17,7 @@ import random
 import time 
 from config import *
 import gym
-from stable_baselines3 import DDPG
+from stable_baselines3 import SAC
 import gym
 from gym import spaces
 from tensorboardX import SummaryWriter
@@ -164,7 +164,7 @@ def main():
     env = CustomSimPyEnv(daily_events,action_space)
     # 에피소드 수를 조정
     # model을 불러올려면 model=(A2C).load->
-    model1 = DDPG('MultiInputPolicy', env, verbose=1)
+    model1 = SAC('MultiInputPolicy', env, verbose=1)
     '''
     model2 = PPO('MultiInputPolicy', env, verbose=0)
     model3 = PPO('MultiInputPolicy', env, verbose=0)
@@ -175,10 +175,10 @@ def main():
     history=env.total_reward_list
     print(len(history))
             #재고제한 변경
-    os.chdir('C:/Users/User/Downloads/DRL-based-IO-main/DRL-based-IO-main/src/logs/DDPG')
+    os.chdir('C:/Users/User/Downloads/DRL-based-IO-main/DRL-based-IO-main/src/logs/SAC')
     history=pd.DataFrame(history)
-    history.to_csv('DDPG_csv.csv')
-    model1.save("DDPG_MODEL")
+    history.to_csv('SAC_csv.csv')
+    model1.save("SAC_MODEL")
     
 if __name__ == "__main__":
     main()
