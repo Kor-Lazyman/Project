@@ -4,6 +4,7 @@ import numpy as np
 from config import *
 import random
 
+TEST=True
 
 
 
@@ -266,7 +267,10 @@ class Customer:
         self.order_history = [0]
         self.cont=0
         self.mean = 5  # 원하는 평균값
-
+        self.test_data=[]
+        for x in range(1000*15):
+            self.test_data.append(random.randint(2,8))
+        self.test_case=0
 # 무작위로 정수값을 뽑는 함수 정의
     def random_integer_from_exponential(self):
         mean = 5  # 평균
@@ -274,11 +278,12 @@ class Customer:
 
 # 랜덤한 수요 생성
         num_samples = 1  # 생성할 수요 데이터 포인트의 개수
-        demand_samples = int(np.round(np.random.normal(mean, std_dev, num_samples)))
+        demand_samples =int(random.randint(2,8))
         
         return demand_samples
     def order(self, sales, product_inventory, daily_events):
         
+     if TEST==False:
         while True:
             if self.cont==0:
                 yield self.env.timeout(0)
@@ -305,7 +310,34 @@ class Customer:
                     
             self.cont+=1
             sales.delivery_check=0
+            sales.delivery_check=0
+     else:
+        while True:
+            if self.cont==0:
+                yield self.env.timeout(0)
+                self.order_size=self.test_data[self.cont+self.test_case*15]
+                self.order_history.append(self.order_size)
+                daily_events.append(
+    f"{self.env.now}: The customer has placed an order for {self.order_size} units of {I[self.item_id]['NAME']}")
+
+            else:
+                yield self.env.timeout(I[self.item_id]["CUST_ORDER_CYCLE"] * 24)
+    # THIS WILL BE A RANDOM VARIABLE
+                if sales.num_shortages>0:
+                    self.order_size =self.test_data[self.cont+self.test_case*15]+sales.num_shortages
+                    self.order_history.append(self.order_size)
+                    daily_events.append(
+     f"{self.env.now}: The customer has placed an order for {self.order_size} units of {I[self.item_id]['NAME']}")
+                    daily_events.append(
+    f"{self.env.now}: Back order for {sales.num_shortages} units of {I[self.item_id]['NAME']}")
+                else:
+                    self.order_size =self.test_data[self.cont+self.test_case*15]
+                    self.order_history.append(self.order_size)
+                    daily_events.append(
+        f"{self.env.now}: The customer has placed an order for {self.order_size} units of {I[self.item_id]['NAME']}")
             
+            self.cont+=1
+            sales.delivery_check=0
     ''' 
     def delivery(self, product_inventory):
         while True:

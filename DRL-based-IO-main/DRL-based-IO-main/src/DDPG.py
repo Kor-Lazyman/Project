@@ -130,7 +130,7 @@ class CustomSimPyEnv(gym.Env):
                 self.sales.daily_selling_cost=0
                 reward =-daily_total_cost
                 print("[Daily Total reward] ", reward)
-        self.total_reward=reward
+                self.total_reward+=reward
                 
         self.current_observation = {
                 'Day':np.array([self.day]),
@@ -164,14 +164,14 @@ def main():
     env = CustomSimPyEnv(daily_events,action_space)
     # 에피소드 수를 조정
     # model을 불러올려면 model=(A2C).load->
-    model1 = DDPG('MultiInputPolicy', env, verbose=1)
+    model1= DDPG('MultiInputPolicy', env, verbose=1,gamma=0.5)
     '''
     model2 = PPO('MultiInputPolicy', env, verbose=0)
     model3 = PPO('MultiInputPolicy', env, verbose=0)
     '''
    
    # model=[model1,model2,model3]
-    model1.learn(total_timesteps=100*3000)
+    model1.learn(total_timesteps=100*1000)
     history=env.total_reward_list
     print(len(history))
             #재고제한 변경

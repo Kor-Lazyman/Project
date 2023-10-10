@@ -17,7 +17,7 @@ import random
 import time 
 from config import *
 import gym
-from stable_baselines3 import A2C
+from stable_baselines3 import PPO
 import gym
 from gym import spaces
 from tensorboardX import SummaryWriter
@@ -26,7 +26,7 @@ import pandas as pd
 import os
 
 # TensorBoard 로깅을 위한 디렉토리 경로 설정
-log_dir="./logs/A2C"
+log_dir="./logs/PPO"
     
 class CustomSimPyEnv(gym.Env):
     def __init__(self, daily_events,action_space):
@@ -130,7 +130,7 @@ class CustomSimPyEnv(gym.Env):
                 self.sales.daily_selling_cost=0
                 reward =-daily_total_cost
                 print("[Daily Total reward] ", reward)
-        self.total_reward=reward
+                self.total_reward=self.total_reward+reward
                 
         self.current_observation = {
                 'Day':np.array([self.day]),
@@ -144,10 +144,10 @@ class CustomSimPyEnv(gym.Env):
             }  
         done = self.simpy_env.now >= 100* 24  # 예: SIM_TIME일 이후에 종료
         if done == True:
-            print("Total reward: ", self.total_reward)
-            self.total_reward_list.append(self.total_reward)
-            self.total_reward = 0
-            self.episode += 1
+           print("Total reward: ", self.total_reward)
+           self.total_reward_list.append(self.total_reward)
+           self.total_reward = 0
+           self.episode += 1
 
         self.day=self.day+1
         print(self.episode)
@@ -163,21 +163,21 @@ def main():
     env = CustomSimPyEnv(daily_events,action_space)
     # 에피소드 수를 조정
     # model을 불러올려면 model=(A2C).load->
-    model1 = A2C('MultiInputPolicy', env, verbose=1)
+    model1 = PPO('MultiInputPolicy', env, verbose=1,n_steps=100)
     '''
     model2 = PPO('MultiInputPolicy', env, verbose=0)
     model3 = PPO('MultiInputPolicy', env, verbose=0)
     '''
    
    # model=[model1,model2,model3]
-    model1.learn(total_timesteps=100*3000)
+    model1.learn(total_timesteps=100*1000)
     history=env.total_reward_list
     print(len(history))
             #재고제한 변경
-    os.chdir('C:/Users/User/Downloads/DRL-based-IO-main/DRL-based-IO-main/src/logs/A2C')
+    os.chdir('C:/Users/User/Downloads/DRL-based-IO-main/DRL-based-IO-main/src/logs/PPO')
     history=pd.DataFrame(history)
-    history.to_csv('A2C_csv.csv')
-    model1.save("A2C_MODEL")
+    history.to_csv('PPO_csv.csv')
+    model1.save("PPO_MODEL")
     
 if __name__ == "__main__":
     main()
