@@ -27,6 +27,7 @@ import random
 # PROCESS_COST: Processing cost of the process [$/day]
 # PROCESS_STOP_COST: Penalty cost for stopping the process [$/unit]
 
+
 # Scenario 1
 I = {0: {"ID": 0, "TYPE": "Product",      "NAME": "PRODUCT",
          "CUST_ORDER_CYCLE": 1,
@@ -38,7 +39,7 @@ I = {0: {"ID": 0, "TYPE": "Product",      "NAME": "PRODUCT",
          "BACKORDER_COST": 50},
      1: {"ID": 1, "TYPE": "Raw Material", "NAME": "RAW MATERIAL 1",
          "MANU_ORDER_CYCLE": 0,
-         "SUP_LEAD_TIME":3,
+         "SUP_LEAD_TIME":4,     #SUP_LEAD_TIME must be an integer
          "HOLD_COST": 1,
          "PURCHASE_COST": 2,
          "SETUP_COST_RAW": 1}}

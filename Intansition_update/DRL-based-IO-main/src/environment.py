@@ -33,6 +33,7 @@ class Inventory:
     def update_inven_level(self, quantity_of_change, daily_events):
         self._cal_holding_cost(daily_events)
         self.on_hand_inventory += quantity_of_change
+       
         if self.on_hand_inventory > self.capacity_limit:
             daily_events.append(
                 f"{self.env.now}: Due to the upper limit of the inventory, {I[self.item_id]['NAME']} is wasted: {self.on_hand_inventory - self.capacity_limit}")
@@ -42,8 +43,8 @@ class Inventory:
                 f"{self.env.now}: Shortage of {I[self.item_id]['NAME']}: {self.capacity_limit - self.on_hand_inventory}")
             self.on_hand_inventory = 0
         daily_events.append(
-            f"{self.env.now}: Inventory level of {I[self.item_id]['NAME']}: {self.on_hand_inventory}")
-
+            f"{self.env.now}: On_Hand_Inventory level of {I[self.item_id]['NAME']}: {self.on_hand_inventory}")
+        self.inventory=self.on_hand_inventory+self.intransition_inventory
     # def cal_inventory_cost(self, daily_events):
     #     if self.current_level > 0:
     #         self.inventory_cost_over_time.append(
@@ -72,7 +73,6 @@ class Provider:
         yield self.env.timeout(lead_time*24)
         inventory.intransition_inventory=inventory.intransition_inventory-demand_size   #update intransition_inventory
         inventory.update_inven_level(demand_size, daily_events) #update on_hand_inventory
-        inventory.inventory=inventory.on_hand_inventory+inventory.intransition_inventory #updatd inventory
         daily_events.append(
             f"{self.env.now}: {self.name} has delivered {demand_size} units of {I[self.item_id]['NAME']}") #Record when Material provide 
 
@@ -103,17 +103,16 @@ class Procurement:
             if order_size > 0:
                     daily_events.append(
                         f"{self.env.now}: Placed an order for {order_size} units of {I[self.item_id]['NAME']}")
-                    #update intansition_inventory
-                    inventory.intransition_inventory+=order_size
                    
+                    inventory.intransition_inventory+=order_size #update intansition_inventory
+                    inventory.inventory+=order_size # update inventory
                     
                     self.env.process(provider.deliver_to_manufacturer(
                         order_size, inventory, daily_events))
-                    self._cal_procurement_cost(order_size, daily_events)
+                    self._cal_procurement_cost(order_size, daily_events)  
             daily_events.append(f"{self.env.now}: Intransition_inventory: {inventory.intransition_inventory} units of {I[self.item_id]['NAME']}")#Record intransition_inventory
-            inventory.inventory=inventory.on_hand_inventory+inventory.intransition_inventory 
-            daily_events.append(f"{self.env.now}: inventory: {inventory.inventory} units of {I[self.item_id]['NAME']}") #Record inventory
-            time=24
+            daily_events.append(f"{self.env.now}: Real_Inventory: {inventory.inventory} units of {I[self.item_id]['NAME']}") #Record inventory
+            time=24 #Change timeout function to cycle 24 hours
     def cal_daily_procurement_cost(self, daily_events):
         daily_events.append(
             f"[Daily procurement cost of {I[self.item_id]['NAME']}]  {self.daily_procurement_cost}")
