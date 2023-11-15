@@ -12,7 +12,7 @@ class GymInterface(gym.Env):
     def __init__(self):
         super(GymInterface, self).__init__()
         # Action space, observation space
-        if RL_ALGORITHM == "DQN":
+        if RL_ALGORITHM == "DQN" or RL_ALGORITHM=="None":
             # Define action space
             self.action_space = spaces.Discrete(len(ACTION_SPACE))
             # Define observation space:
@@ -50,7 +50,6 @@ class GymInterface(gym.Env):
             if STATE_DEMAND:
                 os.append(DEMAND_QTY_MAX - DEMAND_QTY_MIN + 1)
             self.observation_space = spaces.MultiDiscrete(os)
-
         # Simpy environment
         # self.simpy_env = simpy.Environment()
         self.simpy_env, self.inventoryList, self.procurementList, self.productionList, self.sales, self.customer, self.providerList, self.daily_events = env.create_env(
@@ -91,6 +90,12 @@ class GymInterface(gym.Env):
                 if I[_]["TYPE"] == "Raw Material":
                     I[_]["LOT_SIZE_ORDER"] = action[i]
                     i += 1
+        elif RL_ALGORITHM == "None":
+            i = 0
+            for _ in range(len(I)):
+                if I[_]["TYPE"] == "Raw Material":
+                    I[_]["LOT_SIZE_ORDER"] = random.randint(0,4)
+                    i += 1
 
         # Capture the current state of the environment
         # current_state = env.cap_current_state(self.inventoryList)
@@ -114,6 +119,8 @@ class GymInterface(gym.Env):
             print(f"\nDay {(self.simpy_env.now+1) // 24}:")
             if RL_ALGORITHM == "DQN":
                 print(f"[Order Quantity for {I[1]['NAME']}] ", action)
+            elif RL_ALGORITHM=="None":
+                print(f"[Order Quantity for {I[1]['NAME']}]  {I[1]['LOT_SIZE_ORDER']}")
             else:
                 i = 0
                 for _ in range(len(I)):

@@ -5,7 +5,7 @@ import optuna
 import optuna.visualization as vis
 from stable_baselines3.common.evaluation import evaluate_policy
 import time
-if RL_ALGORITHM == "DQN":
+if RL_ALGORITHM == "DQN" or RL_ALGORITHM == "None":
     from stable_baselines3 import DQN
 elif RL_ALGORITHM == "DDPG":
     from stable_baselines3 import DDPG
@@ -50,6 +50,7 @@ def tuning_hyperparam(trial):
     elif RL_ALGORITHM == "PPO":
         model = PPO("MlpPolicy", env, learning_rate=learning_rate,
                     gamma=gamma, batch_size=batch_size, verbose=0)
+    
     # Train the model
     model.learn(total_timesteps=SIM_TIME*N_EPISODES)
     # Evaluate the model
@@ -86,13 +87,15 @@ else:
     elif RL_ALGORITHM == "PPO":
         model = PPO("MlpPolicy", env, learning_rate=BEST_PARAMS['learning_rate'], gamma=BEST_PARAMS['gamma'],
                     batch_size=BEST_PARAMS['batch_size'], verbose=0, tensorboard_log=TENSORFLOW_LOGS)
-
-    model.learn(total_timesteps=SIM_TIME*N_EPISODES)  # Time steps = days
-    env.render()
+    elif RL_ALGORITHM=="None":
+        model = DQN("MlpPolicy", env, learning_rate=BEST_PARAMS['learning_rate'], gamma=BEST_PARAMS['gamma'],
+                    batch_size=BEST_PARAMS['batch_size'], verbose=0, tensorboard_log=TENSORFLOW_LOGS)
+        model.learn(total_timesteps=SIM_TIME*N_EPISODES)  # Time steps = days
+        env.render()
 
     # 학습 후 모델 평가
-    mean_reward, std_reward = evaluate_model(model, env, N_EVAL_EPISODES)
-    print(
+        mean_reward, std_reward = evaluate_model(model, env, N_EVAL_EPISODES)
+        print(
         f"Mean reward over {N_EVAL_EPISODES} episodes: {mean_reward:.2f} +/- {std_reward:.2f}")
 
     # Optimal policy

@@ -89,7 +89,7 @@ P = {0: {"ID": 0, "PRODUCTION_RATE": 2,
          "PROCESS_STOP_COST": 3}}
 '''
 # RL algorithms
-RL_ALGORITHM = "PPO"  # "DP", "DQN", "DDPG", "PPO", "SAC"
+RL_ALGORITHM = "None"  # "DP", "DQN", "DDPG", "PPO", "SAC"
 ACTION_SPACE = [0, 1, 2, 3, 4, 5]
 # Scenario 1-1
 # DQN
@@ -137,8 +137,8 @@ DEMAND_QTY_MAX = 4
 
 # Hyperparameter optimization
 OPTIMIZE_HYPERPARAMETERS = False
-N_TRIALS = 50  # 50
-N_EVAL_EPISODES = 100  # 100
+N_TRIALS = 1  # 50
+N_EVAL_EPISODES = 1  # 100
 
 # Print logs
 PRINT_SIM_EVENTS = True
