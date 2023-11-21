@@ -4,6 +4,9 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 import matplotlib.pyplot as plt
+import Test_Data_Generate
+
+
 
 class NonlinearModel(nn.Module):
     #ANN에 필요한 함수 설정
@@ -23,11 +26,10 @@ class NonlinearModel(nn.Module):
 
 #변수 입력
 num_cont = int(input("Enter the number of data points: "))
-pred_cont = float(input("Enter the value for prediction: "))
+pred_cont =int(input("Enter the value for prediction: "))
 
 #학습 데이터 X,y생성
-X = torch.linspace(0, num_cont,num_cont, dtype=torch.float32).reshape(-1, 1)
-y = 10 * torch.sin(X * 0.5 * np.pi)+random.randint(-5,5)
+
 
 #모델 선언
 model = NonlinearModel()
@@ -41,13 +43,16 @@ optimizer = optim.Adam(model.parameters(), lr=0.01)
 #학습 변수 설정
 num_epoch = 1000
 
+X=torch.linspace(0, num_cont,num_cont, dtype=torch.float32).reshape(-1, 1)
+y=torch.Tensor(Test_Data_Generate.make_data(0,num_cont))
+
 #학습 진행
 for epoch in range(num_epoch):
     inputs = X
     targets = y
 
     # 순전파
-    outputs = model(inputs)
+    outputs=model(inputs)
     loss = criterion(outputs, targets)
 
     # 역전파 및 최적화
@@ -55,15 +60,19 @@ for epoch in range(num_epoch):
     loss.backward()
     optimizer.step()
     
-    #100회마다 출력
+    #100회마다 학습경과 출력
     if (epoch + 1) % 100 == 0:
         print(f'Epoch [{epoch+1}/{num_epoch}], Loss: {loss.item():.4f}')
-        
-      
-model.eval()
-x = torch.tensor([[pred_cont]], dtype=torch.float32)  # 예측을 위해 입력을 텐서로 변환
+ 
+model.eval()        
+X_test = torch.linspace(0, pred_cont, pred_cont, dtype=torch.float32).reshape(-1, 1)
+y_test = torch.Tensor(Test_Data_Generate.make_data(0, pred_cont))
 
-#모델을 통해 예측
-y_pred = model(x)
+# 예측값 계산
+with torch.no_grad():
+    predictions = model(X_test)
 
-print("Pred:", y_pred.item())
+rounded_predictions = torch.round(predictions)
+# 평균 제곱 오차(MSE) 계산
+mse = criterion(rounded_predictions, y_test) 
+print(f'Mean Squared Error (MSE): {mse.item():.4f}')
