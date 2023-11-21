@@ -63,3 +63,5 @@ total_cost_per_day = []
 batch_size = 32
 action_space = []
 values = [0, 10, 20]
+
+RL_ALGORITHM="A2C"#PPO,SAC,A2C
