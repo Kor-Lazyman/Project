@@ -33,7 +33,7 @@ class Inventory:
         self.holding_cost_last_updated = self.env.now
         daily_events.append(
             f"{self.env.now}: Daily holding cost of {I[self.item_id]['NAME']} has been updated: {self.holding_cost}")
-        self.daily_inven_cost += self.holding_cost
+        
 
     def update_inven_level(self, quantity_of_change, daily_events,Decision):
         print("Updated_change:",quantity_of_change)
@@ -48,7 +48,7 @@ class Inventory:
         if Decision==1:
            daily_events.append(
             f"{self.env.now}: Inventory level of {I[self.item_id]['NAME']}: {self.current_level}")
-
+        self.daily_inven_cost += self.holding_cost
     def cal_inventory_cost(self, daily_events):
         if self.current_level > 0:
             self.inventory_cost_over_time.append(

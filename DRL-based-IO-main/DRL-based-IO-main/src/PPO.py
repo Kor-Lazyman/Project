@@ -17,7 +17,7 @@ import random
 import time 
 from config import *
 import gym
-from stable_baselines3 import SAC
+from stable_baselines3 import PPO
 import gym
 from gym import spaces
 from tensorboardX import SummaryWriter
@@ -163,11 +163,8 @@ def main():
     env = CustomSimPyEnv(daily_events,action_space)
     # 에피소드 수를 조정
     # model을 불러올려면 model=(A2C).load->
-    model1 = SAC('MultiInputPolicy', env, verbose=1, )
-    '''
-    model2 = PPO('MultiInputPolicy', env, verbose=0)
-    model3 = PPO('MultiInputPolicy', env, verbose=0)
-    '''
+    model1 = PPO('MultiInputPolicy', env, verbose=1,n_steps=100 )
+ 
    
    # model=[model1,model2,model3]
     model1.learn(total_timesteps=100*10000)
