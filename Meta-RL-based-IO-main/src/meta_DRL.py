@@ -16,7 +16,10 @@ from torch import nn
 from stable_baselines3 import PPO
 from stable_baselines3.common.logger import configure
 from torch.utils.tensorboard import SummaryWriter
-
+from stable_baselines3.common.type_aliases import GymEnv, MaybeCallback, Schedule
+from stable_baselines3.common.utils import explained_variance, get_schedule_fn
+from gymnasium import spaces
+from torch.nn import functional as F
 # Hyperparameters
 alpha = 0.002  # Inner loop step size (사용되지 않는 값) ->  SB3 PPO 기본 값(0.0003)
 BATCH_SIZE = 128  # Default 64
@@ -88,10 +91,114 @@ class MetaLearner:
 
     #     # Zero out the gradients for the next iteration
     #     # self.meta_model.policy.zero_grad()
+    def train(self) -> None:
+        """
+        Update policy using the currently gathered rollout buffer.
+        """
+        # Switch to train mode (this affects batch norm / dropout)
+        self.meta_model.policy.set_training_mode(True)
+        # Compute current clip range
+        clip_range = self.meta_model.clip_range(self.meta_model._current_progress_remaining)  # type: ignore[operator]
+        # Optional: clip range for the value function
+        if self.meta_model.clip_range_vf is not None:
+            clip_range_vf = self.meta_model.clip_range_vf(self.meta_model._current_progress_remaining)  # type: ignore[operator]
 
+        entropy_losses = []
+        pg_losses, value_losses = [], []
+        clip_fractions = []
+
+        continue_training = True
+        # train for n_epochs epochs
+        for epoch in range(self.meta_model.n_epochs):
+            approx_kl_divs = []
+            
+            # Do a complete pass on the rollout buffer
+            for rollout_data in self.meta_model.rollout_buffer.get(self.meta_model.batch_size):
+                actions = rollout_data.actions
+                if isinstance(self.meta_model.action_space, spaces.Discrete):
+                    # Convert discrete action from float to long
+                    actions = rollout_data.actions.long().flatten()
+
+                # Re-sample the noise matrix because the log_std has changed
+                if self.meta_model.use_sde:
+                    self.meta_model.policy.reset_noise(self.meta_model.batch_size)
+
+                values, log_prob, entropy = self.meta_model.policy.evaluate_actions(rollout_data.observations, actions)
+                values = values.flatten()
+                # Normalize advantage
+                advantages = rollout_data.advantages
+                # Normalization does not make sense if mini batchsize == 1, see GH issue #325
+                if self.meta_model.normalize_advantage and len(advantages) > 1:
+                    advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
+
+                # ratio between old and new policy, should be one at the first iteration
+                ratio = torch.exp(log_prob - rollout_data.old_log_prob)
+
+                # clipped surrogate loss
+                policy_loss_1 = advantages * ratio
+                policy_loss_2 = advantages * torch.clamp(ratio, 1 - clip_range, 1 + clip_range)
+                policy_loss = -torch.min(policy_loss_1, policy_loss_2).mean()
+
+                # Logging
+                pg_losses.append(policy_loss.item())
+                clip_fraction = torch.mean((torch.abs(ratio - 1) > clip_range).float()).item()
+                clip_fractions.append(clip_fraction)
+
+                if self.meta_model.clip_range_vf is None:
+                    # No clipping
+                    values_pred = values
+                else:
+                    # Clip torche difference between old and new value
+                    # NOTE: torchis depends on torche reward scaling
+                    values_pred = rollout_data.old_values + torch.clamp(
+                        values - rollout_data.old_values, -clip_range_vf, clip_range_vf
+                    )
+                # Value loss using torche TD(gae_lambda) target
+                value_loss = F.mse_loss(rollout_data.returns, values_pred)
+                value_losses.append(value_loss.item())
+
+                # Entropy loss favor exploration
+                if entropy is None:
+                    # Approximate entropy when no analytical form
+                    entropy_loss = -torch.mean(-log_prob)
+                else:
+                    entropy_loss = -torch.mean(entropy)
+
+                entropy_losses.append(entropy_loss.item())
+
+                loss = policy_loss + self.meta_model.ent_coef * entropy_loss + self.meta_model.vf_coef * value_loss
+
+                # Calculate approximate form of reverse KL Divergence for early stopping
+                # see issue #417: https://gitorchub.com/DLR-RM/stable-baselines3/issues/417
+                # and discussion in PR #419: https://gitorchub.com/DLR-RM/stable-baselines3/pull/419
+                # and Schulman blog: http://joschu.net/blog/kl-approx.html
+                with torch.no_grad():
+                    log_ratio = log_prob - rollout_data.old_log_prob
+                    approx_kl_div = torch.mean((torch.exp(log_ratio) - 1) - log_ratio).cpu().numpy()
+                    approx_kl_divs.append(approx_kl_div)
+
+                if self.meta_model.target_kl is not None and approx_kl_div > 1.5 * self.meta_model.target_kl:
+                    continue_training = False
+                    if self.meta_model.verbose >= 1:
+                        print(f"Early stopping at step {epoch} due to reaching max kl: {approx_kl_div:.2f}")
+                    break
+
+                # Optimization step
+                self.meta_model.policy.optimizer.zero_grad()
+                loss.backward()
+                # Clip grad norm
+                torch.nn.utils.clip_grad_norm_(self.meta_model.policy.parameters(), self.meta_model.max_grad_norm)
+                self.meta_model.policy.optimizer.step()
+
+            self.meta_model._n_updates += 1
+            if not continue_training:
+                break
     def meta_update(self, scenarios,scenario_models):
+        print("Outter_Loop_Start")
         # 각 시나리오 모델에서 얻은 경험을 결합
-        for x in range(len(scenarios)):
+        for outter_itters in range(100):
+            for x in range(len(scenarios)):
+                
                 # 각 시나리오 모델로 환경과 상호작용하여 rollout 수집
                 self.env.scenario=scenario
                 obs = self.env.reset()
@@ -102,19 +209,13 @@ class MetaLearner:
                     obs = next_obs
                     if done:
                         obs = self.env.reset()
+                
+                self.meta_model.rollout_buffer=scenario_models[x].rollout_buffer
+                self.train()
 
-                self.meta_model.rollout_buffer.observations=scenario_models[x].rollout_buffer.observations
-                self.meta_model.rollout_buffer.actions=scenario_models[x].rollout_buffer.actions
-                self.meta_model.rollout_buffer.rewards=scenario_models[x].rollout_buffer.rewards
-                self.meta_model.rollout_buffer.advantages=scenario_models[x].rollout_buffer.advantages
-                self.meta_model.rollout_buffer.returns=scenario_models[x].rollout_buffer.returns
-                self.meta_model.rollout_buffer.episode_starts=scenario_models[x].rollout_buffer.episode_starts
-                self.meta_model.rollout_buffer.log_probs=scenario_models[x].rollout_buffer.log_probs
-                self.meta_model.rollout_buffer.values=scenario_models[x].rollout_buffer.values
-                self.meta_model.rollout_buffer.observation=scenario_models[x].rollout_buffer.observations
-                self.meta_model.train()
+        meta_learner.meta_model.save("maml_ppo_model")
+            
 
-        self.meta_model.save("maml_ppo_model")
     '''
     def compute_kl(self, old_policy, new_policy, obs):
         old_dist = old_policy.get_distribution(obs)
